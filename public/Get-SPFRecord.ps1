@@ -40,25 +40,25 @@ function Get-SPFRecord {
         foreach ($domain in $Name) {
 
             # Get SPF record from specified domain
-            $SPF = Resolve-DnsName -Name $domain -Type TXT @SplatParameters | where-object { $_.strings -match "v=spf1" } | Select-Object -ExpandProperty strings -ErrorAction SilentlyContinue
-            
+            $SPF = Resolve-DnsName -Name $domain -Type TXT @SplatParameters | Where-Object { $_.strings -match "v=spf1" } | Select-Object -ExpandProperty strings -ErrorAction SilentlyContinue
+
             # Checks for SPF redirect and follow the redirect
             if ($SPF -match "redirect") {
                 $redirect = $SPF.Split(" ")
                 $RedirectName = $redirect -match "redirect" -replace "redirect="
-                $SPF = Resolve-DnsName -Name "$RedirectName" -Type TXT @SplatParameters | where-object { $_.strings -match "v=spf1" } | Select-Object -ExpandProperty strings -ErrorAction SilentlyContinue
+                $SPF = Resolve-DnsName -Name "$RedirectName" -Type TXT @SplatParameters | Where-Object { $_.strings -match "v=spf1" } | Select-Object -ExpandProperty strings -ErrorAction SilentlyContinue
             }
 
             # Check for multiple SPF records
             $RecipientServer = "v=spf1"
-            $SPFCount = ([regex]::Matches($SPF, $RecipientServer)).Count
-            
-            # If there is no SPF record 
+            $SPFCount = ($SPF -Match $RecipientServer).Count
+
+            # If there is no SPF record
             if ($null -eq $SPF) {
                 $SpfAdvisory = "Domain does not have an SPF record. To prevent abuse of this domain, please add an SPF record to it."
             }
             elseif ($SPFCount -gt 1) {
-                $SpfAdvisory = "Domain has more than one SPF record. Only one SPF record per domain is allowed. This is explicitly defined in RFC4408."     
+                $SpfAdvisory = "Domain has more than one SPF record. Only one SPF record per domain is allowed. This is explicitly defined in RFC4408."
                 $SpfTotalLenght = 0
                 foreach ($char in $SPF) {
                     $SPFTotalLenght += $char.Length
@@ -75,11 +75,11 @@ function Get-SPFRecord {
                         $SpfAdvisory += "Your SPF-record has more than 450 characters. This is SHOULD be avoided according to RFC7208. "
                     }
                     elseif ($mechanism.Length -ge 255) {
-                        # See: https://datatracker.ietf.org/doc/html/rfc4408#section-3.1.3 
-                        $SpfAdvisory = "Your SPF record has more than 255 characters in one string. This MUST not be done as explicitly defined in RFC4408. " 
+                        # See: https://datatracker.ietf.org/doc/html/rfc4408#section-3.1.3
+                        $SpfAdvisory = "Your SPF record has more than 255 characters in one string. This MUST not be done as explicitly defined in RFC4408. "
                     }
                 }
-            
+
                 switch -Regex ($SPF) {
                     '~all' {
                         $SpfAdvisory += "An SPF-record is configured but the policy is not sufficiently strict."
@@ -111,6 +111,6 @@ function Get-SPFRecord {
             $SpfReturnValues
         }
     } end {}
-} 
+}
 
 Set-Alias gspf -Value Get-SPFRecord
